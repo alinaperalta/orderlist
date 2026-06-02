@@ -253,7 +253,7 @@ function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
 function initSelects() {
   const vs = document.getElementById('f-vendor');
   VENDORS.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; vs.appendChild(o); });
-  vs.value = 'UNFI';
+  vs.value = 'General Trading';
   const cs = document.getElementById('f-category');
   CATEGORIES.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; cs.appendChild(o); });
   cs.value = 'Grocery / Dry';
@@ -360,7 +360,7 @@ function openAdd() {
   document.getElementById('f-sku').value = '';
   document.getElementById('f-qty').value = '';
   document.getElementById('f-notes').value = '';
-  document.getElementById('f-vendor').value = 'UNFI';
+  document.getElementById('f-vendor').value = 'General Trading';
   document.getElementById('f-category').value = 'Grocery / Dry';
   formUrgent = false;
   document.getElementById('urgent-toggle').classList.remove('urgent-on');
