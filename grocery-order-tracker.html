@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Order List">
+<meta name="theme-color" content="#000000">
+<title>Order List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: #000; font-family: 'DM Sans', sans-serif; color: #F2F2F7; overflow: hidden; }
+  ::-webkit-scrollbar { display: none; }
+  input, select, textarea, button { font-family: 'DM Sans', sans-serif; }
+  input:focus, select:focus, textarea:focus { outline: none; }
+
+/* Screens */
+#app { height: 100dvh; position: relative; overflow: hidden; }
+.screen { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.35s ease; }
+.screen.hidden { pointer-events: none; opacity: 0; transform: translateY(100%); }
+.screen.active { transform: translateY(0); opacity: 1; }
+
+/* Header */
+.header { padding: env(safe-area-inset-top, 48px) 20px 14px; padding-top: calc(env(safe-area-inset-top, 0px) + 48px); display: flex; justify-content: space-between; align-items: flex-end; }
+.header-title { font-size: 34px; font-weight: 700; letter-spacing: -0.5px; }
+.header-sub { font-size: 14px; color: #8E8E93; margin-top: 2px; }
+.add-btn { width: 44px; height: 44px; border-radius: 22px; background: #007AFF; border: none; color: #fff; font-size: 26px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 300; flex-shrink: 0; }
+.add-btn:active { opacity: 0.6; transform: scale(0.93); }
+
+/* Filter chips */
+.filters-wrap { padding: 0 16px 8px; }
+.filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; background: #1C1C1E; border: 1px solid #2C2C2E; color: #8E8E93; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.chip:active { transform: scale(0.93); }
+.chip.active-vendor { background: #007AFF22; border-color: #007AFF; color: #007AFF; }
+.chip.active-cat { background: #FF950022; border-color: #FF9500; color: #FF9500; }
+
+/* Toggle row */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid #1C1C1E; }
+.toggle-label { font-size: 14px; color: #8E8E93; }
+.toggle { width: 51px; height: 31px; border-radius: 16px; background: #3A3A3C; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+.toggle.on { background: #007AFF; }
+.toggle.urgent-on { background: #FF3B30; }
+.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 14px; background: #fff; transition: left 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+.toggle.on .toggle-thumb, .toggle.urgent-on .toggle-thumb { left: 22px; }
+
+/* List scroll */
+.list-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 0; }
+
+/* Empty state */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 32px; gap: 8px; }
+.empty-icon { font-size: 52px; }
+.empty-text { font-size: 20px; font-weight: 600; margin-top: 8px; }
+.empty-sub { font-size: 14px; color: #636366; text-align: center; line-height: 1.5; }
+
+/* Vendor section */
+.vendor-section { margin-bottom: 8px; }
+.vendor-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px 6px; }
+.vendor-name { font-size: 12px; font-weight: 700; color: #8E8E93; letter-spacing: 0.8px; text-transform: uppercase; }
+.vendor-count { font-size: 12px; color: #636366; }
+
+/* Item row */
+.item-row { display: flex; align-items: center; padding: 12px 16px; background: #1C1C1E; margin-bottom: 1px; cursor: pointer; gap: 12px; transition: transform 0.15s, opacity 0.2s; }
+.item-row:active { transform: scale(0.97); opacity: 0.8; }
+.item-row.ordered { opacity: 0.4; }
+.check-wrap { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.check-empty { width: 24px; height: 24px; border-radius: 12px; border: 2px solid #3A3A3C; }
+.check-done { width: 24px; height: 24px; border-radius: 12px; background: #30D158; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; font-weight: 700; }
+.item-info { flex: 1; min-width: 0; }
+.item-name { font-size: 16px; color: #F2F2F7; font-weight: 500; display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.urgent-dot { width: 8px; height: 8px; border-radius: 4px; background: #FF3B30; flex-shrink: 0; }
+.item-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.cat-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+.meta-text { font-size: 12px; color: #636366; }
+.chevron { font-size: 20px; color: #3A3A3C; font-weight: 300; flex-shrink: 0; }
+
+/* Sheet header */
+.sheet-header { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 12px; padding-top: calc(env(safe-area-inset-top, 0px) + 52px); border-bottom: 1px solid #1C1C1E; }
+.sheet-title { font-size: 17px; font-weight: 600; }
+.cancel-btn { background: none; border: none; color: #007AFF; font-size: 17px; cursor: pointer; padding: 4px; min-width: 60px; }
+.cancel-btn:active { opacity: 0.5; }
+.save-btn { background: none; border: none; color: #007AFF; font-size: 17px; font-weight: 600; cursor: pointer; padding: 4px; min-width: 60px; text-align: right; }
+.save-btn:active { opacity: 0.5; }
+.delete-btn { color: #FF3B30; }
+
+/* Form */
+.form-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 0; }
+.form-section { padding: 0 20px 20px; }
+.form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; color: #636366; margin-bottom: 8px; text-transform: uppercase; }
+.input { width: 100%; background: #1C1C1E; border: 1px solid #2C2C2E; border-radius: 12px; padding: 14px 16px; color: #F2F2F7; font-size: 16px; }
+.input.shake { animation: shake 0.45s ease; }
+.input::placeholder { color: #48484A; }
+textarea.input { height: 80px; resize: none; padding-top: 12px; }
+.select-wrap { position: relative; }
+select.input { appearance: none; padding-right: 40px; cursor: pointer; }
+.select-arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #636366; pointer-events: none; font-size: 14px; }
+.urgent-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #1C1C1E; margin: 0 20px; border-radius: 12px; cursor: pointer; gap: 16px; }
+.urgent-label { font-size: 16px; font-weight: 500; }
+.urgent-sub { font-size: 12px; color: #636366; margin-top: 2px; }
+
+/* Detail */
+.detail-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 0; }
+.urgent-banner { background: #FF3B3022; border-radius: 12px; padding: 12px 16px; margin: 0 16px 16px; font-size: 14px; font-weight: 600; color: #FF3B30; }
+.detail-card { background: #1C1C1E; margin: 0 16px 20px; border-radius: 16px; padding: 20px; }
+.detail-name { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+.detail-sku { font-size: 13px; color: #636366; font-family: ‘DM Mono’, monospace; margin-bottom: 12px; }
+.cat-badge-lg { display: inline-block; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 8px; }
+.detail-group { background: #1C1C1E; margin: 0 16px 20px; border-radius: 16px; overflow: hidden; }
+.detail-row { display: flex; align-items: flex-start; padding: 14px 16px; border-bottom: 1px solid #2C2C2E; }
+.detail-row:last-child { border-bottom: none; }
+.detail-row-icon { font-size: 18px; width: 32px; flex-shrink: 0; }
+.detail-row-label { font-size: 11px; color: #8E8E93; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 3px; }
+.detail-row-value { font-size: 16px; color: #F2F2F7; }
+.detail-row-value.accent { color: #007AFF; font-weight: 600; }
+.big-btn { display: block; width: calc(100% - 32px); margin: 0 16px; padding: 17px; border-radius: 14px; border: none; color: #fff; font-size: 17px; font-weight: 600; cursor: pointer; letter-spacing: -0.2px; transition: opacity 0.15s, transform 0.15s; }
+.big-btn:active { opacity: 0.7; transform: scale(0.97); }
+.big-btn.order { background: #007AFF; }
+.big-btn.unorder { background: #2C2C2E; }
+.spacer { height: 100px; }
+
+@keyframes shake {
+0%,100%{transform:translateX(0)}
+20%{transform:translateX(-8px)}
+40%{transform:translateX(8px)}
+60%{transform:translateX(-5px)}
+80%{transform:translateX(5px)}
+}
+@keyframes fadeIn {
+from{opacity:0;transform:translateY(10px)}
+to{opacity:1;transform:translateY(0)}
+}
+.fade-in { animation: fadeIn 0.25s ease forwards; }
+</style>
+
+</head>
+<body>
+<div id="app">
+  <!-- LIST SCREEN -->
+  <div id="screen-list" class="screen active">
+    <div class="header">
+      <div>
+        <div class="header-title">Order List</div>
+        <div class="header-sub" id="pending-count">0 items to order</div>
+      </div>
+      <button class="add-btn" onclick="openAdd()">+</button>
+    </div>
+    <div class="filters-wrap">
+      <div class="filter-row" id="vendor-chips"></div>
+      <div class="filter-row" style="margin-top:8px" id="cat-chips"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Show ordered</span>
+      <div class="toggle" id="show-ordered-toggle" onclick="toggleShowOrdered()">
+        <div class="toggle-thumb"></div>
+      </div>
+    </div>
+    <div class="list-scroll" id="list-content"></div>
+  </div>
+
+  <!-- ADD SCREEN -->
+
+  <div id="screen-add" class="screen hidden">
+    <div class="sheet-header">
+      <button class="cancel-btn" onclick="closeAdd()">Cancel</button>
+      <span class="sheet-title">New Item</span>
+      <button class="save-btn" onclick="submitAdd()">Add</button>
+    </div>
+    <div class="form-scroll">
+      <div class="form-section">
+        <div class="form-label">Item Name *</div>
+        <input id="f-name" class="input" type="text" placeholder="e.g. Organic Whole Milk" autocomplete="on">
+      </div>
+      <div class="form-section">
+        <div class="form-label">SKU / UPC</div>
+        <input id="f-sku" class="input" type="text" placeholder="Optional" autocomplete="off">
+      </div>
+      <div class="form-section">
+        <div class="form-label">Qty Needed</div>
+        <input id="f-qty" class="input" type="text" placeholder="e.g. 2 cases, 6 units" autocomplete="off">
+      </div>
+      <div class="form-section">
+        <div class="form-label">Order From</div>
+        <div class="select-wrap">
+          <select id="f-vendor" class="input"></select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Category</div>
+        <div class="select-wrap">
+          <select id="f-category" class="input"></select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-label">Notes</div>
+        <textarea id="f-notes" class="input" placeholder="Preferred brand, substitutes, etc."></textarea>
+      </div>
+      <div class="form-section">
+        <div class="urgent-row" onclick="toggleUrgentForm()">
+          <div>
+            <div class="urgent-label">Mark as Urgent</div>
+            <div class="urgent-sub">Flag for immediate ordering</div>
+          </div>
+          <div class="toggle" id="urgent-toggle">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL SCREEN -->
+
+  <div id="screen-detail" class="screen hidden">
+    <div class="sheet-header">
+      <button class="cancel-btn" onclick="closeDetail()">‹ Back</button>
+      <span class="sheet-title">Item Detail</span>
+      <button class="save-btn delete-btn" onclick="deleteCurrentItem()">Delete</button>
+    </div>
+    <div class="detail-scroll" id="detail-content"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'grocery-order-v2';
+const VENDORS = ['General Trading','UNFI','Jetro','Flair','Rubio','Nelcy/Pepsi','Tropical', 'Despradel', 'Manhattan Beer','Bimbo', 'Derel Farms', 'Ruben/Flaco','Other'];
+const CATEGORIES = ['Produce','Dairy & Eggs','Meat & Seafood','Frozen','Grocery / Dry','Beverages','Snacks','Bakery','Health & Beauty','Household','Beer/Alochol','Other'];
+const CAT_COLORS = {
+  'Produce':'#34C759','Dairy & Eggs':'#5AC8FA','Meat & Seafood':'#FF3B30',
+  'Frozen':'#007AFF','Grocery / Dry':'#FF9500','Beverages':'#AF52DE',
+  'Snacks':'#FF6B35','Bakery':'#C9A84C','Health & Beauty':'#FF2D92',
+  'Household':'#636366','Other':'#8E8E93'
+};
+
+let items = [];
+let filterVendor = 'All';
+let filterCat = 'All';
+let showOrdered = false;
+let formUrgent = false;
+let currentDetailId = null;
+
+// Load
+try { items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { items = []; }
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e){} }
+
+// Init selects
+function initSelects() {
+  const vs = document.getElementById('f-vendor');
+  VENDORS.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; vs.appendChild(o); });
+  vs.value = 'UNFI';
+  const cs = document.getElementById('f-category');
+  CATEGORIES.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; cs.appendChild(o); });
+  cs.value = 'Grocery / Dry';
+}
+
+// Chips
+function buildChips() {
+  const vc = document.getElementById('vendor-chips');
+  vc.innerHTML = '';
+  ['All', ...VENDORS].forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (filterVendor === v ? ' active-vendor' : '');
+    b.textContent = v;
+    b.onclick = () => { filterVendor = v; buildChips(); renderList(); };
+    vc.appendChild(b);
+  });
+  const cc = document.getElementById('cat-chips');
+  cc.innerHTML = '';
+  ['All', ...CATEGORIES].forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (filterCat === c ? ' active-cat' : '');
+    b.textContent = c;
+    b.onclick = () => { filterCat = c; buildChips(); renderList(); };
+    cc.appendChild(b);
+  });
+}
+
+// Render list
+function renderList() {
+  const pending = items.filter(i => !i.ordered).length;
+  document.getElementById('pending-count').textContent = `${pending} item${pending !== 1 ? 's' : ''} to order`;
+
+  const filtered = items.filter(i => {
+    if (!showOrdered && i.ordered) return false;
+    if (filterVendor !== 'All' && i.vendor !== filterVendor) return false;
+    if (filterCat !== 'All' && i.category !== filterCat) return false;
+    return true;
+  });
+
+  const grouped = {};
+  filtered.forEach(i => { if (!grouped[i.vendor]) grouped[i.vendor] = []; grouped[i.vendor].push(i); });
+
+  const el = document.getElementById('list-content');
+  el.innerHTML = '';
+
+  if (Object.keys(grouped).length === 0) {
+    el.innerHTML = `<div class="empty-state fade-in"><div class="empty-icon">🛒</div><div class="empty-text">No missing items</div><div class="empty-sub">Tap + to add something you need to order</div></div>`;
+    return;
+  }
+
+  Object.entries(grouped).forEach(([vendor, vItems]) => {
+    const pendingV = vItems.filter(i => !i.ordered).length;
+    const sec = document.createElement('div');
+    sec.className = 'vendor-section fade-in';
+    sec.innerHTML = `<div class="vendor-header"><span class="vendor-name">${vendor}</span><span class="vendor-count">${pendingV} pending</span></div>`;
+    vItems.forEach(item => {
+      const color = CAT_COLORS[item.category] || '#8E8E93';
+      const row = document.createElement('div');
+      row.className = 'item-row' + (item.ordered ? ' ordered' : '');
+      row.innerHTML = `
+        <div class="check-wrap" data-id="${item.id}" onclick="event.stopPropagation();toggleOrder('${item.id}')">
+          ${item.ordered
+            ? `<div class="check-done">✓</div>`
+            : `<div class="check-empty"></div>`}
+        </div>
+        <div class="item-info">
+          <div class="item-name">${item.urgent ? '<span class="urgent-dot"></span>' : ''}${escHtml(item.name)}</div>
+          <div class="item-meta">
+            <span class="cat-badge" style="background:${color}22;color:${color}">${item.category}</span>
+            ${item.qty ? `<span class="meta-text">· ${escHtml(item.qty)}</span>` : ''}
+            ${item.sku ? `<span class="meta-text">· ${escHtml(item.sku)}</span>` : ''}
+          </div>
+        </div>
+        <span class="chevron">›</span>`;
+      row.onclick = () => openDetail(item.id);
+      sec.appendChild(row);
+    });
+    el.appendChild(sec);
+  });
+  const spacer = document.createElement('div'); spacer.style.height='100px'; el.appendChild(spacer);
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toggleOrder(id) {
+  const item = items.find(i => i.id === id);
+  if (item) { item.ordered = !item.ordered; save(); renderList(); }
+}
+
+// Screens
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.classList.add('hidden');
+  });
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  requestAnimationFrame(() => el.classList.add('active'));
+}
+
+// Add
+function openAdd() {
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-sku').value = '';
+  document.getElementById('f-qty').value = '';
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-vendor').value = 'UNFI';
+  document.getElementById('f-category').value = 'Grocery / Dry';
+  formUrgent = false;
+  document.getElementById('urgent-toggle').classList.remove('urgent-on');
+  showScreen('screen-add');
+  setTimeout(() => document.getElementById('f-name').focus(), 350);
+}
+
+function closeAdd() { showScreen('screen-list'); renderList(); }
+
+function toggleUrgentForm() {
+  formUrgent = !formUrgent;
+  document.getElementById('urgent-toggle').classList.toggle('urgent-on', formUrgent);
+}
+
+function submitAdd() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) {
+    const inp = document.getElementById('f-name');
+    inp.classList.remove('shake');
+    void inp.offsetWidth;
+    inp.classList.add('shake');
+    inp.addEventListener('animationend', () => inp.classList.remove('shake'), { once: true });
+    return;
+  }
+  const item = {
+    id: Date.now().toString(),
+    name,
+    sku: document.getElementById('f-sku').value.trim(),
+    qty: document.getElementById('f-qty').value.trim(),
+    vendor: document.getElementById('f-vendor').value,
+    category: document.getElementById('f-category').value,
+    notes: document.getElementById('f-notes').value.trim(),
+    urgent: formUrgent,
+    ordered: false,
+    createdAt: new Date().toISOString(),
+  };
+  items.unshift(item);
+  save();
+  closeAdd();
+}
+
+// Detail
+function openDetail(id) {
+  currentDetailId = id;
+  renderDetail();
+  showScreen('screen-detail');
+}
+
+function closeDetail() { showScreen('screen-list'); renderList(); }
+
+function renderDetail() {
+  const item = items.find(i => i.id === currentDetailId);
+  if (!item) return;
+  const color = CAT_COLORS[item.category] || '#8E8E93';
+  const date = new Date(item.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const el = document.getElementById('detail-content');
+  el.innerHTML = `
+    ${item.urgent ? '<div class="urgent-banner">🔴 &nbsp;Urgent — Order Immediately</div>' : ''}
+    <div class="detail-card">
+      <div class="detail-name">${escHtml(item.name)}</div>
+      ${item.sku ? `<div class="detail-sku">SKU: ${escHtml(item.sku)}</div>` : ''}
+      <span class="cat-badge-lg" style="background:${color}22;color:${color}">${item.category}</span>
+    </div>
+    <div class="detail-group">
+      <div class="detail-row">
+        <span class="detail-row-icon">📦</span>
+        <div><div class="detail-row-label">Order From</div><div class="detail-row-value accent">${escHtml(item.vendor)}</div></div>
+      </div>
+      ${item.qty ? `<div class="detail-row"><span class="detail-row-icon">🔢</span><div><div class="detail-row-label">Qty Needed</div><div class="detail-row-value">${escHtml(item.qty)}</div></div></div>` : ''}
+      <div class="detail-row">
+        <span class="detail-row-icon">${item.ordered ? '✅' : '⏳'}</span>
+        <div><div class="detail-row-label">Status</div><div class="detail-row-value">${item.ordered ? 'Ordered' : 'Pending'}</div></div>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-icon">📅</span>
+        <div><div class="detail-row-label">Added</div><div class="detail-row-value">${date}</div></div>
+      </div>
+      ${item.notes ? `<div class="detail-row"><span class="detail-row-icon">📝</span><div><div class="detail-row-label">Notes</div><div class="detail-row-value">${escHtml(item.notes)}</div></div></div>` : ''}
+    </div>
+    <button class="big-btn ${item.ordered ? 'unorder' : 'order'}" onclick="toggleOrderDetail()">
+      ${item.ordered ? 'Mark as Pending' : 'Mark as Ordered ✓'}
+    </button>
+    <div style="height:60px"></div>`;
+}
+
+function toggleOrderDetail() {
+  const item = items.find(i => i.id === currentDetailId);
+  if (item) { item.ordered = !item.ordered; save(); renderDetail(); }
+}
+
+function deleteCurrentItem() {
+  if (!confirm('Delete this item?')) return;
+  items = items.filter(i => i.id !== currentDetailId);
+  save();
+  closeDetail();
+}
+
+// Show ordered toggle
+function toggleShowOrdered() {
+  showOrdered = !showOrdered;
+  document.getElementById('show-ordered-toggle').classList.toggle('on', showOrdered);
+  renderList();
+}
+
+// Init
+initSelects();
+buildChips();
+renderList();
+</script>
+
+</body>
+</html>
