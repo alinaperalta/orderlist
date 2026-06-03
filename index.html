@@ -229,8 +229,8 @@ to{opacity:1;transform:translateY(0)}
 
 <script>
 const STORAGE_KEY = 'grocery-order-v2';
-const VENDORS = ['General Trading','UNFI','Jetro','Flair','Rubio','Arabes','Nelcy/Pepsi','Tropical', 'Despradel', 'Manhattan Beer','Bimbo', 'Derel Farms', 'Ruben/Flaco','Other'];
-const CATEGORIES = ['Produce','Dairy & Eggs','Meat & Seafood','Frozen','Grocery / Dry','Beverages','Snacks','Bakery','Health & Beauty','Household','Beer/Alochol','Other'];
+const VENDORS = ['General Trading','UNFI','Jetro','Flair','Rubio Produce','Arabes/AAA','Nelcy/Pepsi','Tropical Chesse/Induveca', 'Despradel', 'Manhattan Beer','Bimbo', 'Derle Farms', 'Ruben/Flaco','Other'];
+const CATEGORIES = ['Produce','Dairy & Eggs','Meat & Seafood','Frozen','Grocery / Dry','Beverages','Snacks','Bakery','Health & Beauty','Household','Beer/Alcohol','Other'];
 const CAT_COLORS = {
   'Produce':'#34C759','Dairy & Eggs':'#5AC8FA','Meat & Seafood':'#FF3B30',
   'Frozen':'#007AFF','Grocery / Dry':'#FF9500','Beverages':'#AF52DE',
@@ -313,7 +313,7 @@ function renderList() {
       const color = CAT_COLORS[item.category] || '#8E8E93';
       const row = document.createElement('div');
       row.className = 'item-row' + (item.ordered ? ' ordered' : '');
-      row.innerHTML = `
+      row.innerHTML = `git
         <div class="check-wrap" data-id="${item.id}" onclick="event.stopPropagation();toggleOrder('${item.id}')">
           ${item.ordered
             ? `<div class="check-done">✓</div>`
@@ -339,6 +339,7 @@ function renderList() {
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function toggleOrder(id) {
+  navigator.vibrate?.(10);  // the ?. means it silently skips on unsupported browsers
   const item = items.find(i => i.id === id);
   if (item) { item.ordered = !item.ordered; save(); renderList(); }
 }
@@ -447,6 +448,7 @@ function renderDetail() {
 }
 
 function toggleOrderDetail() {
+  navigator.vibrate?.(10);
   const item = items.find(i => i.id === currentDetailId);
   if (item) { item.ordered = !item.ordered; save(); renderDetail(); }
 }
