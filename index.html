@@ -339,7 +339,7 @@ function renderList() {
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function toggleOrder(id) {
-  navigator.vibrate?.(10);  // the ?. means it silently skips on unsupported browsers
+  //navigator.vibrate?.(10);  // the ?. means it silently skips on unsupported browsers
   const item = items.find(i => i.id === id);
   if (item) { item.ordered = !item.ordered; save(); renderList(); }
 }
@@ -448,7 +448,7 @@ function renderDetail() {
 }
 
 function toggleOrderDetail() {
-  navigator.vibrate?.(10);
+  //navigator.vibrate?.(10);
   const item = items.find(i => i.id === currentDetailId);
   if (item) { item.ordered = !item.ordered; save(); renderDetail(); }
 }
